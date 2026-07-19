@@ -1636,12 +1636,28 @@ function angleDelta(a, b) {
   return d;
 }
 
-// test/debug hook (used by the headless smoke test)
+// test/debug hook (used by the headless smoke test and the trailer recorder)
 window.__dbg = {
+  manual: false, // pause the RAF loop for deterministic external stepping
   get state() { return gameState; },
   get takedowns() { return takedowns; },
   crimPos(i) { const p = crims[i].g.position; return [p.x, p.y, p.z, crims[i].down]; },
-  warp(x, y, z) { player.pos.set(x, y, z); player.vel.set(0, 0, 0); }
+  warp(x, y, z) { player.pos.set(x, y, z); player.vel.set(0, 0, 0); },
+  step(dt) { update(dt); renderer.render(scene, camera); },
+  setKey(code, v) { keys[code] = v; },
+  setLook(y, p) { yaw = y; pitch = p; },
+  setMouse(v) { mouseDown = v; },
+  primary() { onPrimary(); },
+  webAttack() { tryWebAttack(); },
+  info() {
+    return {
+      state: gameState, timeLeft, takedowns, batmanMode,
+      pos: [player.pos.x, player.pos.y, player.pos.z],
+      vel: [player.vel.x, player.vel.y, player.vel.z],
+      onGround: player.onGround, swinging: player.swinging,
+      endShown: !document.getElementById('endScreen').classList.contains('hidden')
+    };
+  }
 };
 
 // ---------------- Loop ----------------
@@ -1649,6 +1665,7 @@ renderer.setAnimationLoop(() => {
   const now = performance.now();
   const rawDt = Math.min((now - last) / 1000, 0.1);
   last = now;
+  if (window.__dbg.manual) return;
   update(rawDt);
   renderer.render(scene, camera);
 });
